@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>現在位置からぐるなび検索</title>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>現在位置からぐるなび検索</h1>
+      </div>
+      <h3>検索範囲は？<br></h3>
+      <form name="serch">
+        <select id="Select1">
+          <option>300m</option>
+          <option>500m</option>
+          <option>1000m</option>
+          <option>2000m</option>
+          <option>3000m</option>
+        </select>
+      </form><br>
+      <button  type="button" onclick="start()">検索</button>
+      <hr>
+      <ul id="result"></ul>
+      <form id="button">
+        <input type="button" value="前へ" onClick="pagedown()">
+          <input type="button" value="次へ" onClick="run()">
+       <ul id="page"></ul>
+      </form>
+    </div>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
+    <script>
+      var page=0; //現在のページ状況
+      var fFlag=0;  //ページ上限フラグ
+      //初期化メソッド
+      function start(){
+        page=0;
+        fFlag=0;
+        run();  
+      }
+      //ページ戻りメソッド
+      function pagedown(){
+        if(page>1){
+          page-=2;
+          fFlag=0;
+          run();
+        }
+      }
+      //本体メソッド
+      function run() {
+        
+        if(fFlag==0){        
+          page++;
+          //セレクトの処理
+          var ran = document.serch.Select1.selectedIndex;
+          ran++;
+          // Geolocation APIの呼び出し
+          navigator.geolocation.getCurrentPosition(function(pos) {
+            // Geolocation APIのコールバック関数
+            // console.log(pos);
+            var lat = pos.coords.latitude;
+            var lng = pos.coords.longitude;
+          
+            // ぐるなびAPIの呼び出し
+            $.get(
+              'http://api.gnavi.co.jp/ver1/RestSearchAPI/',
+              {
+                keyid: '3204d58b6de6d673790f0c547dbd7c3c',
+                format: 'json',
+                latitude: lat,
+                longitude: lng,
+                range: ran,
+                sort: 1,
+                offset_page: page
+              },
+              function(response) {
+                // ぐるなびAPIのコールバック関数
+                var results = response.rest
+                $('#result').empty();
+                for (var i = 0; i < results.length; i++) {
+                  var result = results[i];
+                  var img_url=result.image_url.shop_image1;
+                  //店舗名表示
+                  $('<li><a></a></li>')
+                   .find('a')
+                    .text(result.name)
+                    .attr('href', result.url)
+                   .end()
+                   .appendTo('#result');
+                  //アクセス表示
+                  $('<ul><h4></h4></ul>')
+                   .find('h4')
+                    .text(result.access.station +"より"+ result.access.walk +"分")
+                  .end()
+                  .appendTo('#result');
+                  
+                }
+                //ページ情報を表示
+                var pfirst=page*10-9;
+                var plast=page*10;
+                if(response.total_hit_count<plast){
+                  plast=response.total_hit_count;
+                  fFlag=1;
+                }
+                $('#page').empty();
+                $('<ul><h5></h5></ul>')
+                    .find('h5')
+                      .text(response.page_offset + "ページ")
+                    .end()
+                    .appendTo('#page');
+                $('<ul><h5></h5></ul>')
+                    .find('h5')
+                      .text(response.total_hit_count + "件中" + "　　　　" + pfirst + "件から" + plast + "件を表示中")
+                    .end()
+                    .appendTo('#page');
+              },
+              'json'
+            );
+          });
+        }
+      }
+/*
+残りの修正点
+・レスポンスのないアクセスなどをObjectから--に変える
+・画像の追加
+・店舗詳細ページ
+*/
+    </script>
+  </body>
+</html>
